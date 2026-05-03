@@ -1,0 +1,60 @@
+{
+  "name": "GPT Crawler MCP — Weekly docs re-index",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "weeks", "weekday": 1, "hour": 9 }] }
+      },
+      "name": "Schedule (Mon 09:00)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [200, 300],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "actorId": "kazkn/gpt-crawler-mcp",
+        "input": "={\n  \"urls\": [\"={{ $vars.DOCS_URL }}\"],\n  \"match\": \"={{ $vars.DOCS_URL }}/**\",\n  \"maxPagesToCrawl\": {{ $vars.MAX_PAGES || 100 }},\n  \"outputFormat\": \"json\"\n}"
+      },
+      "name": "Apify — gpt-crawler-mcp",
+      "type": "n8n-nodes-base.apify",
+      "position": [450, 300],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-small",
+        "text": "={{ $json.text }}"
+      },
+      "name": "OpenAI — embed",
+      "type": "n8n-nodes-base.openAi",
+      "position": [700, 300],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "indexName": "={{ $vars.PINECONE_INDEX }}"
+      },
+      "name": "Pinecone — upsert",
+      "type": "n8n-nodes-base.pinecone",
+      "position": [950, 300],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "channel": "={{ $vars.SLACK_CHANNEL }}",
+        "text": "=📚 Re-indexed {{ $items('Apify — gpt-crawler-mcp').length }} pages this week (~${{ ($items('Apify — gpt-crawler-mcp').length * 0.001).toFixed(2) }} crawl cost)"
+      },
+      "name": "Slack — digest",
+      "type": "n8n-nodes-base.slack",
+      "position": [1200, 300],
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Schedule (Mon 09:00)": { "main": [[{ "node": "Apify — gpt-crawler-mcp", "type": "main", "index": 0 }]] },
+    "Apify — gpt-crawler-mcp": { "main": [[{ "node": "OpenAI — embed", "type": "main", "index": 0 }]] },
+    "OpenAI — embed": { "main": [[{ "node": "Pinecone — upsert", "type": "main", "index": 0 }]] },
+    "Pinecone — upsert": { "main": [[{ "node": "Slack — digest", "type": "main", "index": 0 }]] }
+  }
+}

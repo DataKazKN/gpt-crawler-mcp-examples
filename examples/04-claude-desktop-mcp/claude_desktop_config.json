@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "gpt-crawler": {
+      "type": "url",
+      "url": "https://kazkn--gpt-crawler-mcp.apify.actor/mcp?token=YOUR_APIFY_TOKEN",
+      "timeout": 180000
+    }
+  }
+}
